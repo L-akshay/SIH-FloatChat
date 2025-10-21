@@ -8,3 +8,165 @@ Original file is located at
 """
 
 pip install argopy
+from argopy import DataFetcher , set_options
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+from sklearn.impute import SimpleImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error ,r2_score
+
+set_options(src='argovis')
+
+fetcher1 = DataFetcher().region([80, 100, 5, 25, 0, 1000])
+data1 = fetcher1.load().data
+
+data1
+
+df = data1.to_dataframe().reset_index()
+
+pip install ydata-profiling
+
+df.head()
+
+df.shape
+
+df.info()
+
+df.isnull().sum()
+
+fetcher1.plot('trajectory')
+
+df = df.drop(columns=['N_POINTS','CYCLE_NUMBER','DATA_MODE','DIRECTION','PLATFORM_NUMBER','POSITION_QC','TIME_QC','TIME'])
+
+df.head()
+
+X = df[['LATITUDE','LONGITUDE','PRES','PSAL']]
+y = df['TEMP']
+
+X= X[~y.isna()]
+y = y.dropna()
+
+X.columns = X.columns.map(lambda x : str(x))
+
+trf1 = ColumnTransformer([
+    ("imputer_PSAL",SimpleImputer(),[3]),
+],remainder="passthrough")
+
+trf2 = DecisionTreeRegressor()
+
+random_forest = RandomForestRegressor()
+
+pipe = Pipeline([
+    ('trf1',trf1),
+    ('trf2',trf2),
+])
+
+pipe2 = Pipeline([
+    ('trf1',trf1),
+    ('trf2',random_forest)
+
+])
+
+X_train,X_test,y_train,y_test = train_test_split(X,y,test_size=0.2,random_state=42)
+pipe.fit(X_train,y_train)
+
+pipe2.fit(X_train,y_train)
+
+y_pred_1 = pipe.predict(X_test)
+y_pred_2 = pipe2.predict(X_test)
+
+print("R2 score for Decision Tree",r2_score(y_test,y_pred_1))
+print("R2 score for Random Forest ",r2_score(y_test,y_pred_2))
+
+print("RMSE score for Decision Tree",np.sqrt(mean_squared_error(y_test,y_pred_1)))
+print("RMSE score for Random Forest ",np.sqrt(mean_squared_error(y_test,y_pred_2)))
+
+import joblib
+joblib.dump(pipe2, "temp_2_model.pkl")
+
+from google.colab import files
+files.download("temp_2_model.pkl")
+
+df.head()
+
+X1 = df[["LATITUDE","LONGITUDE","PRES",'TEMP']]
+y1 = df["PSAL"]
+
+X1.columns = X1.columns.map(lambda x : str(x))
+
+X1.head()
+
+X1 = X1[~y1.isna()]
+y1 = y1.dropna()
+
+trf2 = ColumnTransformer([
+    ('imputer_TEMP',SimpleImputer(),[3])
+],remainder="passthrough")
+
+trf3 = DecisionTreeRegressor()
+
+trf4 = RandomForestRegressor()
+
+pipe3 = Pipeline([
+    ('trf1',trf2),
+    ('trf2',trf3)
+])
+
+pipe4 = Pipeline([
+    ('trf1',trf2),
+    ('trf2',trf4)
+])
+
+X1_train,X1_test,y1_train,y1_test = train_test_split(X1,y1,test_size=0.2,random_state=42)
+
+pipe3.fit(X1_train,y1_train)
+
+pipe4.fit(X1_train,y1_train)
+
+y_pred_1 = pipe3.predict(X1_test)
+y_pred_2 = pipe4.predict(X1_test)
+
+print("R2 score for decision tree: ",r2_score(y1_test,y_pred_1))
+print("R2 score for random forest: ",r2_score(y1_test,y_pred_2))
+
+print("RMSE Score for decision tree: ",np.sqrt(mean_squared_error(y1_test,y_pred_1)))
+print("RMSE Score for random forest: ",np.sqrt(mean_squared_error(y1_test,y_pred_2)))
+
+import joblib
+joblib.dump(pipe4, "psal_2_model.pkl")
+
+from google.colab import files
+files.download("psal_2_model.pkl")
+
+pip install huggingface_hub
+
+from huggingface_hub import login
+login()
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+from huggingface_hub import upload_file
+
+repo_id = "Suyash1120/Bay_Of_Bengal_model"  # replace with your repo
+upload_file(
+    path_or_fileobj=r"/content/psal_2_model.pkl",         # local file
+    path_in_repo="psal_2_model.pkl",            # how it will appear online
+    repo_id=repo_id,
+    repo_type="model"
+)
+
+from huggingface_hub import upload_file
+
+repo_id = "Suyash1120/Bay_Of_Bengal_model"  # replace with your repo
+upload_file(
+    path_or_fileobj=r"/content/temp_2_model.pkl",         # local file
+    path_in_repo="temp_2_model.pkl",            # how it will appear online
+    repo_id=repo_id,
+    repo_type="model"
+)
