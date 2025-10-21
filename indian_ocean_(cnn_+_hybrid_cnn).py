@@ -1023,7 +1023,7 @@ if __name__ == "__main__":
     results = analyze_your_argo_data()
 
     # Optionally save results
-    save_choice = input("\n💾Save results to disk? (y/n): ")
+    save_choice = input("\nSave results to disk? (y/n): ")
     if save_choice.lower() == 'y':
         save_model_results(results)
 
